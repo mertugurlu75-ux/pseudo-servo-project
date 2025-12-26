@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pseudo-Servo Motor Attachment with Encoder</title>
+
+  <!-- Prism.js Arduino / C++ Syntax Highlight -->
+  <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --card:#111827;
+      --muted:#94a3b8;
+      --text:#e5e7eb;
+      --brand:#38bdf8;
+      --border:rgba(148,163,184,.18);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);
+      color:var(--text);
+    }
+    a{text-decoration:none;color:inherit}
+    .wrap{max-width:1100px;margin:auto;padding:20px}
+    .nav{
+      position:sticky;top:0;z-index:10;
+      background:rgba(11,15,23,.9);
+      border-bottom:1px solid var(--border);
+      padding:14px 20px;
+      display:flex;justify-content:space-between;align-items:center;
+    }
+    .btn{
+      padding:8px 14px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#111827;
+      cursor:pointer;
+      font-size:14px;
+    }
+    .btn:hover{border-color:var(--brand)}
+    .section{margin:48px 0}
+    .card{
+      background:#111827;
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:22px;
+    }
+    h1{font-size:36px;margin-top:0}
+    h2{margin-top:0}
+    .muted{color:var(--muted)}
+    .divider{height:1px;background:var(--border);margin:18px 0}
+
+    /* CODE */
+    pre{
+      border-radius:14px;
+      font-size:13px;
+      overflow:auto;
+    }
+    .code-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:10px;
+    }
+    .tag{
+      font-size:12px;
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#0b0f17;
+    }
+    .toast{
+      position:fixed;
+      bottom:20px;
+      left:50%;
+      transform:translateX(-50%);
+      background:#111827;
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      display:none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAV -->
+  <div class="nav">
+    <strong>Pseudo-Servo Project</strong>
+    <div style="display:flex;gap:10px">
+      <a class="btn" href="#overview">Overview</a>
+      <a class="btn" href="#how">How it works</a>
+      <a class="btn" href="#results">Results</a>
+      <a class="btn" href="#code">Code</a>
+      <a class="btn" href="#team">Team</a>
+    </div>
+  </div>
+
+  <main class="wrap">
+
+    <!-- OVERVIEW -->
+    <section id="overview" class="section">
+      <div class="card">
+        <h1>Pseudo-Servo Motor Attachment with Encoder</h1>
+        <p class="muted">
+          A low-cost, modular system that converts a standard DC motor into a
+          position-controlled servo using an optical encoder and PID feedback.
+        </p>
+      </div>
+    </section>
+
+    <!-- HOW -->
+    <section id="how" class="section">
+      <div class="card">
+        <h2>How it works</h2>
+        <ul>
+          <li>Optical slotted encoder disk generates pulses</li>
+          <li>Arduino counts pulses to calculate angular position</li>
+          <li>PID controller corrects error in real time</li>
+          <li>DC motor behaves like a servo motor</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results" class="section">
+      <div class="card">
+        <h2>Results</h2>
+        <p class="muted">
+          Tests showed repeatable positioning with an average error of ±4°.
+          Improvements included motor upgrade, better encoder disk design and
+          PID tuning.
+        </p>
+      </div>
+    </section>
+
+    <!-- CODE -->
+    <section id="code" class="section">
+      <div class="card">
+        <h2>Code</h2>
+        <p class="muted"><b>System Run Code</b> — Arduino PID control code.</p>
+
+        <div class="divider"></div>
+
+        <div class="code-header">
+          <span class="tag">Arduino / C++</span>
+          <button class="btn" id="copyCodeBtn">Copy code</button>
+        </div>
+
+<pre class="language-cpp"><code class="language-cpp">// --- PIN TANIMLAMALARI ---
+const int sensorPin = A0; 
+const int ENA = 6;
+const int IN1 = 9;
+const int IN2 = 8;
+
+// --- SİSTEM AYARLARI ---
+const int diskYarikSayisi = 90; 
+const int esikDegeri = 500; 
+
+// * HIZ SINIRLARI *
+const int MUTLAK_MAX_HIZ = 10; 
+const int minMotorGucu = 70; 
+
+// --- PID KATSAYILARI ---
+double Kp = 5.0; 
+double Ki = 0.0; 
+double Kd = 0.5; 
+
+long anlikKonum = 0; 
+long hedefKonum = 0;
+bool sinyalYuksekte = false; 
+
+unsigned long sonZaman = 0;
+double toplamHata = 0;
+double sonHata = 0;
+int motorYonu = 1;
+
+void setup() {
+  pinMode(ENA, OUTPUT);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  Serial.begin(9600);
+  sonZaman = millis();
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    int aci = Serial.parseInt();
+    while (Serial.available()) Serial.read();
+    if (aci != 0) aciyaGit(aci);
+  }
+  analogSayacGuncelle();
+  pidKontrol();
+}
+
+void analogSayacGuncelle() {
+  int v = analogRead(sensorPin);
+  if (v > esikDegeri && !sinyalYuksekte) {
+    anlikKonum += motorYonu;
+    sinyalYuksekte = true;
+  } else if (v < esikDegeri - 50) {
+    sinyalYuksekte = false;
+  }
+}
+
+void aciyaGit(int aci) {
+  hedefKonum = anlikKonum + (aci * diskYarikSayisi / 360);
+  toplamHata = 0;
+  sonHata = 0;
+}
+
+void pidKontrol() {
+  unsigned long now = millis();
+  double dt = now - sonZaman;
+  if (dt >= 10) {
+    double hata = hedefKonum - anlikKonum;
+    double dHata = (hata - sonHata) / dt;
+    double out = (Kp * hata) + (Kd * dHata);
+    motorSur(out);
+    sonHata = hata;
+    sonZaman = now;
+  }
+}
+
+void motorSur(double out) {
+  int pwm = constrain(abs(out), minMotorGucu, MUTLAK_MAX_HIZ);
+  if (out > 0) {
+    motorYonu = 1;
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, LOW);
+  } else {
+    motorYonu = -1;
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, HIGH);
+  }
+  analogWrite(ENA, pwm);
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- TEAM -->
+    <section id="team" class="section">
+      <div class="card">
+        <h2>Team</h2>
+        <ul>
+          <li>Türker Sütcü</li>
+          <li>Mert Uğurlu</li>
+          <li>Numan Said Türkyılmaz</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="toast" id="toast">Copied!</div>
+
+  <!-- Prism.js -->
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-cpp.min.js"></script>
+
+  <script>
+    const btn = document.getElementById("copyCodeBtn");
+    const toast = document.getElementById("toast");
+    btn.addEventListener("click", async () => {
+      const code = document.querySelector("#code code").innerText;
+      await navigator.clipboard.writeText(code);
+      toast.style.display = "block";
+      setTimeout(()=>toast.style.display="none",2000);
+    });
+  </script>
+
+</body>
+</html>
